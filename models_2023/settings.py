@@ -1,3 +1,4 @@
+# 1:38:45
 # To reverse concrete migration, pass the app name and the number of the previous migration:
 # python manage.py migrate web 002
 # TODO: Check relations(Others -> Please specify)
