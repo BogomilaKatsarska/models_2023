@@ -1,14 +1,35 @@
+from datetime import date
+
 from django.db import models
 
+from models_2023.web.validators import validate_before_today
 
-class Department(models.Model):
+
+class AuditInfoMixin(models.Model):
+    # No table will be created in DB
+    # Can be inherited in other models
+    class Meta:
+        abstract = True
+
+    # This will be automatically set on creation (insert)
+    created_on = models.DateTimeField(
+        auto_now_add=True,  # optional
+    )
+
+    # This will be automatically set on each `save`/`update`
+    updated_on = models.DateTimeField(
+        auto_now=True,  # optional
+    )
+
+
+class Department(models.Model, AuditInfoMixin):
     name = models.CharField(max_length=15)
 
     def __str__(self):
         return f'Id: {self.pk}; Name: {self.name}'
 
 
-class Project(models.Model):
+class Project(models.Model, AuditInfoMixin):
     name = models.CharField(
         max_length=30,
     )
@@ -19,7 +40,9 @@ class Project(models.Model):
     deadline = models.DateField()
 
 
-class Employee(models.Model):
+class Employee(models.Model, AuditInfoMixin):
+    class Meta:
+        ordering = ('-age',)
     LEVEL_JUNIOR = 'Junior'
     LEVEL_REGULAR = 'Regular'
     LEVEL_SENIOR = 'Senior'
@@ -56,7 +79,9 @@ class Employee(models.Model):
     # Text => strings with unlimited length
     review = models.TextField()
 
-    start_date = models.DateField()
+    start_date = models.DateField(
+        validators=(validate_before_today,)
+    )
 
     email = models.EmailField(
         # Adds `UNIQUE` constraint
@@ -68,15 +93,6 @@ class Employee(models.Model):
         null=True,
     )
 
-    # This will be automatically set on creation (insert)
-    created_on = models.DateTimeField(
-        auto_now_add=True,  # optional
-    )
-
-    # This will be automatically set on each `save`/`update`
-    updated_on = models.DateTimeField(
-        auto_now=True,  # optional
-    )
 
     # One-to-many
     department = models.ForeignKey(
@@ -89,17 +105,22 @@ class Employee(models.Model):
         Project,
         related_name='employees',
     )
+    slug = models.SlugField(unique=True)
 
     @property
     def fullname(self):
         return f'{self.first_name} {self.last_name}'
+
+    @property
+    def years_of_employment(self):
+        return date.today() - self.start_date
 
     def __str__(self):
         # self.id == self.pk
         return f'Id: {self.pk}; Name: {self.fullname}'
 
 
-class AccessCard(models.Model):
+class AccessCard(models.Model, AuditInfoMixin):
     employee = models.OneToOneField(
         Employee,
         on_delete=models.CASCADE,
@@ -108,6 +129,9 @@ class AccessCard(models.Model):
 
 
 class Category(models.Model):
+    class Meta:
+        verbose_name_plural = 'Categories'
+
     name = models.CharField(
         max_length=15,
     )
